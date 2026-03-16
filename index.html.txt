@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Contact Injector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="max-w-3xl mx-auto p-6">
+        <!-- Header -->
+        <div class="gradient-bg rounded-2xl p-8 mb-8 text-white shadow-lg">
+            <h1 class="text-3xl font-bold mb-2">Generador de Contactos VCF</h1>
+            <p class="opacity-90 text-lg">La forma más rápida de importar miles de números a WhatsApp Business.</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <div class="mb-6">
+                <label class="block text-gray-700 font-semibold mb-2">1. Pega tus datos aquí</label>
+                <p class="text-sm text-gray-500 mb-3">Formato sugerido: <code class="bg-gray-100 px-1">Nombre, Numero</code> (uno por línea). O simplemente la lista de números.</p>
+                <textarea id="contactInput" rows="10" 
+                    class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Juan Perez, +521234567890&#10;Maria Lopez, +34600111222&#10;+5491122334455"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Prefijo común (Opcional)</label>
+                    <input type="text" id="prefix" placeholder="Ej: Cliente" 
+                        class="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Nombre del archivo</label>
+                    <input type="text" id="filename" value="contactos_whatsapp" 
+                        class="w-full p-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+            </div>
+
+            <button onclick="generateVCF()" 
+                class="w-full gradient-bg text-white font-bold py-4 rounded-xl shadow-md hover:scale-[1.01] transition-transform active:scale-95 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                GENERAR ARCHIVO VCF
+            </button>
+
+            <div id="status" class="mt-6 hidden">
+                <div class="p-4 rounded-xl bg-green-100 text-green-800 flex items-center gap-3">
+                    <span class="text-xl">✅</span>
+                    <span id="statusText">Archivo generado con éxito.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="text-green-600 font-bold text-2xl mb-2">01</div>
+                <h3 class="font-bold text-gray-800 mb-1">Descarga</h3>
+                <p class="text-sm text-gray-600">Genera el archivo en tu PC o móvil.</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="text-green-600 font-bold text-2xl mb-2">02</div>
+                <h3 class="font-bold text-gray-800 mb-1">Importa</h3>
+                <p class="text-sm text-gray-600">Abre el archivo y selecciona "Guardar todo".</p>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="text-green-600 font-bold text-2xl mb-2">03</div>
+                <h3 class="font-bold text-gray-800 mb-1">Actualiza</h3>
+                <p class="text-sm text-gray-600">En WhatsApp, actualiza tu lista de contactos.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateVCF() {
+            const input = document.getElementById('contactInput').value.trim();
+            const commonPrefix = document.getElementById('prefix').value.trim();
+            const filename = document.getElementById('filename').value.trim() || 'contactos';
+            
+            if (!input) {
+                alert("Por favor, introduce al menos un número.");
+                return;
+            }
+
+            const lines = input.split('\n');
+            let vCardContent = "";
+            let count = 0;
+
+            lines.forEach((line, index) => {
+                let name, phone;
+                
+                if (line.includes(',')) {
+                    const parts = line.split(',');
+                    name = parts[0].trim();
+                    phone = parts[1].trim().replace(/\s+/g, '');
+                } else {
+                    phone = line.trim().replace(/\s+/g, '');
+                    name = `${commonPrefix} ${index + 1}`.trim();
+                }
+
+                if (phone.length > 5) { // Filtro básico de número válido
+                    vCardContent += "BEGIN:VCARD\n";
+                    vCardContent += "VERSION:3.0\n";
+                    vCardContent += `FN:${name}\n`;
+                    vCardContent += `TEL;TYPE=CELL:${phone}\n`;
+                    vCardContent += "END:VCARD\n";
+                    count++;
+                }
+            });
+
+            if (count === 0) {
+                alert("No se detectaron números válidos.");
+                return;
+            }
+
+            const blob = new Blob([vCardContent], { type: "text/vcard" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${filename}.vcf`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            statusDiv.classList.remove('hidden');
+            statusText.innerText = `¡Éxito! Se han procesado ${count} contactos.`;
+        }
+    </script>
+</body>
+</html>
